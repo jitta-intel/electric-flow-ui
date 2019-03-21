@@ -1,0 +1,40 @@
+
+<div id="app" v-cloak>
+  <h2 class="page-title">Mainboards</h2>
+  <ul>
+    <li v-for="mb in mainboards">
+      <a :href="mb.url">
+        ${mb.name}
+      </a>
+    </li>
+  </ul>
+</div>
+
+<script>
+  const app = new Vue({
+    el: '#app',
+    data: {
+      raw: []
+    },
+    methods: {
+      fetchList: function() {
+        fetch(`${CONFIG.api}/mainboard`)
+        .then(resp => resp.json())
+        .then((json) => {
+          this.raw = json
+        })
+      },
+    },
+    computed: {
+      mainboards() {
+        return this.raw.map((r) => {
+          r.url = `${CONFIG.basePath}/mainboard/${r.name}`
+          return r
+        })
+      }
+    },
+    beforeMount(){
+      this.fetchList()
+    }
+  })
+</script>

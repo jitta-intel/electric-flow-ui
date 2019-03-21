@@ -1,0 +1,197 @@
+<div id="app" v-cloak>
+  <h2 class="page-title">
+    <a :href="mainboardPath">${mainboard}</a>
+    >
+    <span class="text-secondary">discharge:${ parentId }</span>
+    <b-btn variant="outline-secondary" @click="fetchList">
+      <span class="oi oi-reload" style="font-size:16px;"></span>
+    </b-btn>
+  </h2>
+  <div class="container">
+    <b-card>
+      <span>Payload - </span>
+      <code>${mainDischarge.payload}</code>
+    </b-card>
+    <br />
+    <b-card no-body v-for="d in discharges" >
+      <b-card-header header-tag="header" class="p-1" role="tab">
+        <b-btn block href="#"
+          v-b-toggle="d.boardName"
+          variant="default"
+          class="text-left"
+          :disabled="d.disabled"
+        >
+          <span>${d.title}</span>
+          <b-badge class="text-capitalize" v-if="!d.disabled" :variant="d.variant">
+            ${d.status}
+          </b-badge>
+          <span class="text-secondary">${d._id}</span>
+        </b-btn >
+      </b-card-header>
+      <b-collapse :id="d.boardName" v-if="d.status !== 'pending'" :visible="d.isActive" accordion="my-accordion" role="tabpanel">
+        <b-card-body>
+          <h6>Powersource</h6>
+          <p class="card-text">
+            <span style="display:inline-block; min-width:120px;margin-left:24px;">Status</span>
+            <b-badge class="text-capitalize" :variant="d.powerSource.variant">
+              ${d.powerSource.status}
+            </b-badge>
+          </p>
+          <h6>Electrons</h6>
+          <p class="card-text">
+            <span style="display:inline-block; min-width:120px;margin-left:24px;">Summary</span>
+            <span class="oi oi-caret-right text-secondary" style="font-size:12px"></span>
+            <b-badge variant="light">Total: ${d.stats.total}</b-badge>
+            <b-badge variant="info">Complete: ${d.stats.complete}</b-badge>
+            <b-badge variant="danger" v-if="d.stats.failed">Failed: ${d.stats.failed}</b-badge>
+            <b-badge variant="dark" v-if="d.stats.markedAsComplete">Marked: -${d.stats.markedAsComplete}</b-badge>
+            <b-badge variant="success" v-if="d.stats.isAllDone">Done</b-badge>
+            <b-badge variant="warning" v-else-if="d.stats.completeRatio > 0">Progress: ${d.progress}%
+            </b-badge>
+          </p>
+          <h6>By Resistors</h6>
+          <p class="card-text">
+            <p v-for="rstat in d.resistorStats">
+              <span class='resistor-name' style="display:inline-block; min-width:120px;margin-left:24px;">${rstat.name} </span>
+              <span class="oi oi-caret-right text-secondary" style="font-size:12px"></span>
+              <b-badge variant="light">Total: ${rstat.stats.total - rstat.stats.skipped}</b-badge>
+              <b-badge variant="secondary">Pushed/Consumed: ${rstat.stats.pushed}/${rstat.stats.consumed}</b-badge>
+              <b-badge variant="info">Complete: ${rstat.stats.complete}</b-badge>
+              <b-badge variant="danger" v-if="rstat.stats.failed">Failed: ${rstat.stats.failed}</b-badge>
+              <b-badge variant="dark" v-if="rstat.stats.markedAsComplete">Marked: -${rstat.stats.markedAsComplete}</b-badge>
+              <b-badge variant="success" v-if="rstat.stats.isAllDone">Done</b-badge>
+              <b-badge variant="warning" v-else-if="rstat.stats.completeRatio > 0">Progress: ${rstat.progress}%
+              </b-badge>
+              <b-badge v-if="isResistorWorking(rstat.stats)" variant="warning">Working</b-badge>
+              <b-btn :href="getArenaPath(rstat.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn>
+            </p>
+            <div v-if="d.retry.length > 0">
+              <h6>Retry</h6>
+              <p>
+                <ul>
+                  <li v-for="retry in d.retry">
+                    #${retry.no} ${dateFormat(retry.date)} ${retry.type}
+                  </li>
+                </ul>
+              </p>
+            </div>
+          </p>
+          <div>
+            <b-btn v-if="d.status === 'failed'" variant="danger" @click="retryDischarge(d.boardName, d._id)">Retry</b-btn>
+          </div>
+        </b-card-body>
+      </b-collapse>
+    </b-card>
+  </div>
+</div>
+
+
+<script>
+  const app = new Vue({
+    el: '#app',
+    data: {
+      mainboard: PARAM.mainboard,
+      mainboardPath: `${CONFIG.basePath}/mainboard/${PARAM.mainboard}`,
+      mainDischarge: {},
+      rawDischarges: []
+    },
+    methods: {
+      fetchMainDischarge: function() {
+        const query = `_id=${QUERY.parentId}`
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/discharge?${query}`)
+        .then(resp => {
+          console.log(resp)
+          return resp.json()
+        })
+        .then((json) => {
+          this.mainDischarge = json
+          console.log(this.mainDischarge)
+        })
+      },
+      fetchList: function() {
+        const query = `parentId=${QUERY.parentId}&includeNext=true`
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/subDischarges?${query}`)
+        .then(resp => resp.json())
+        .then((json) => {
+          this.rawDischarges = json
+        })
+      },
+      retryDischarge: function(boardName, dischargeId) {
+        const data = {
+          boardName,
+          dischargeId
+        }
+        console.log('post data ', data)
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/subDischarges/retry`
+        ,{
+          method: 'POST',
+          body: JSON.stringify(data), // data can be `string` or
+          headers:{
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(resp => resp.json())
+        .then((json) => {
+          this.fetchList()
+        })
+      },
+
+      isResistorWorking: function(stat) {
+        return (stat.failed + stat.complete) < stat.consumed
+      },
+      dateFormat: function(date) {
+        return moment(date).format('YYYY-MM-DD hh:mm')
+      },
+      getArenaPath: function(queuePath) {
+        return `${CONFIG.arenaPath}${queuePath}`
+      },
+      getVariantFormStatus: function(status) {
+        let variant = 'default'
+        if (status === 'complete') variant = 'success'
+        else if (status === 'failed') variant = 'danger'
+        else if (status === 'active') {
+          variant = 'warning'
+          isActive = true
+        } else {
+          variant = 'light'
+        }
+        return variant
+      }
+    },
+    computed: {
+      discharges() {
+        return this.rawDischarges.map((r) => {
+          r.date = moment(r.createdAt).calendar()
+          if (r.status === 'pending') {
+            r.title = `${r.boardName}`
+            r.disabled = true
+          } else {
+            r.title = `${r.boardName}, ${r.date}`
+          }
+          r.progress = parseFloat(r.stats.completeRatio * 100).toFixed(1)
+          r.variant = this.getVariantFormStatus(r.status)
+          if (r.status === 'active') r.isActive = true
+          r.resistorStats = r.resistorStats || []
+          r.resistorStats = r.resistorStats.map((rstat) => {
+            rstat.progress = parseFloat(rstat.stats.completeRatio * 100).toFixed(1)
+            return rstat
+          })
+          r.powerSource = r.powerSource || { status: 'n/a' }
+          r.powerSource.variant = this.getVariantFormStatus(r.powerSource.status)
+          return r
+        })
+      },
+      parentId() {
+        return QUERY.parentId
+      }
+    },
+    beforeMount(){
+      this.fetchMainDischarge()
+      this.fetchList()
+      const self = this
+      setInterval(() => {
+        self.fetchList()
+      }, 6000)
+    }
+  })
+</script>

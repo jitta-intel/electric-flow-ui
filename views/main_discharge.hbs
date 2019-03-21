@@ -1,0 +1,138 @@
+
+<div id="app" v-cloak>
+  <h2 class="page-title">Discharges of ${mainboard}</h2>
+  <div style="display:flex;justify-content:space-between;  padding: 16px 0;">
+    <div style="display:flex;min-width:50%;align-items:baseline;">
+      <vuejs-datepicker v-model="query.startDate" name="date-picker"></vuejs-datepicker>
+      <vuejs-datepicker v-model="query.endDate" name="date-picker" ></vuejs-datepicker>
+      <b-btn @click="fetchRawData">
+        Apply
+      </b-btn>
+    </div>
+    <b-btn variant="primary"  v-b-modal.create-modal>
+      + Discharge
+    </b-btn>
+  </div>
+  <b-modal ref="create-model" size="lg" centered id="create-modal" hide-footer title="Create Discharge">
+    <label>Payload</label>
+    <div id="json-editor"></div>
+    <div class="text-right" style="padding: 16px 0px">
+      <b-btn variant="primary" :disabled="discharging" @click="saveDischarge">Discharge</b-btn>
+    </div>
+  </b-modal>
+  <table class="table">
+    <thead class="thead-light">
+      <tr>
+        <th scope="col" width="20%">Created</th>
+        <th scope="col">Payload</th>
+        <th scope="col">Status</th>
+        <th scope="col">Progress</th>
+        <th scope="col">Integrity</th>
+        <th scope="col">Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="(d, index) in discharges">
+        <td scope="row">
+          <a :href="d.url ">
+            ${ d.date }
+          </a>
+        </td>
+        <td><code>${ d.payload }</code></td>
+        <td :class="{
+          'text-success': d.isComplete,
+          'text-danger': d.isFailed
+          }">${ d.status }</td>
+        <td>${ d.progress }%</td>
+        <td><span v-if="d.isDone">${ d.integrity }%</span></td>
+        <td>${ d.durationTxt }</td>
+
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<script>
+  let jsoneditor = {}
+  const app = new Vue({
+    el: '#app',
+    components: {
+  	  vuejsDatepicker
+    },
+    data: {
+      mainboard: PARAM.mainboard,
+      query: {
+        startDate: new Date(),
+        endDate: new Date()
+      },
+      discharging: false,
+      rawDischarges: [],
+    },
+    methods: {
+      fetchRawData: function() {
+        const { startDate, endDate } = this.query
+        console.log('fetch with date ', this.query)
+        let query = ''
+        if (startDate) query += `start_date=${moment(startDate).format('YYYY-MM-DD')}&`
+        if (endDate) query += `end_date=${moment(endDate).format('YYYY-MM-DD')}`
+
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/discharges?${query}`)
+        .then(resp => resp.json())
+        .then((json) => {
+          this.rawDischarges = json
+        })
+      },
+      dateFormat: function (date) {
+        return moment(date).calendar()
+      },
+      saveDischarge: function () {
+        this.discharging = true
+        const payload = jsoneditor.get()
+
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/discharges`
+        , {
+          method: 'POST',
+          body: JSON.stringify({ payload }), // data can be `string` or
+          headers:{ 'Content-Type': 'application/json' }
+        })
+        .then(resp => resp.json())
+        .then((json) => {
+          this.$refs['create-model'].hide()
+          this.discharging = false
+          this.fetchRawData()
+        })
+      }
+    },
+    computed: {
+      discharges () {
+        return this.rawDischarges.map((r) => {
+          r.date = moment(r.createdAt).calendar()
+          r.progress = parseFloat(r.stats.completeRatio * 100).toFixed(1)
+          r.integrity = parseFloat(r.stats.integrityRatio * 100).toFixed(1)
+          r.isComplete = r.status === 'complete'
+          r.isFailed = r.status === 'failed'
+          r.isDone = r.isComplete || r.isFailed
+          r.url = `${CONFIG.basePath}/mainboard/${PARAM.mainboard}/circuit_discharge?parentId=${r._id}`
+          r.retryCount = r.retry ? r.retry.length : ' '
+          const diff = moment(r.updatedAt).diff(moment(r.createdAt))
+          r.duration = moment.duration(diff)
+          r.durationTxt = ''
+          if (r.duration.hours() > 0) {
+            r.durationTxt += `${r.duration.hours()}h`
+          }
+          r.durationTxt += `${r.duration.minutes()}m`
+          return r
+        })
+      }
+    },
+    beforeMount() {
+      this.fetchRawData()
+    },
+    mounted() {
+      const container = document.getElementById("json-editor")
+      const options = { mode: 'code' }
+      jsoneditor = new JSONEditor(container, options)
+    }
+  })
+</script>
