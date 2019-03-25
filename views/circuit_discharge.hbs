@@ -36,6 +36,7 @@
             <b-badge class="text-capitalize" :variant="d.powerSource.variant">
               ${d.powerSource.status}
             </b-badge>
+            <b-btn :href="getArenaPath(d.powerSource.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn>
           </p>
           <h6>Electrons</h6>
           <p class="card-text">
@@ -59,7 +60,7 @@
               <b-badge variant="info">Complete: ${rstat.stats.complete}</b-badge>
               <b-badge variant="danger" v-if="rstat.stats.failed">Failed: ${rstat.stats.failed}</b-badge>
               <b-badge variant="dark" v-if="rstat.stats.markedAsComplete">Marked: -${rstat.stats.markedAsComplete}</b-badge>
-              <b-badge variant="success" v-if="rstat.stats.isAllDone">Done</b-badge>
+              <b-badge variant="success" v-if="rstat.onHandDone">Done</b-badge>
               <b-badge variant="warning" v-else-if="rstat.stats.completeRatio > 0">Progress: ${rstat.progress}%
               </b-badge>
               <b-badge v-if="isResistorWorking(rstat.stats)" variant="warning">Working</b-badge>
@@ -152,6 +153,8 @@
         else if (status === 'active') {
           variant = 'warning'
           isActive = true
+        } else if (status === 'aborted') {
+          variant = 'default'
         } else {
           variant = 'light'
         }
@@ -160,25 +163,28 @@
     },
     computed: {
       discharges() {
-        return this.rawDischarges.map((r) => {
-          r.date = moment(r.createdAt).calendar()
-          if (r.status === 'pending') {
-            r.title = `${r.boardName}`
-            r.disabled = true
+        return this.rawDischarges.map((discharge) => {
+          discharge.date = moment(discharge.createdAt).calendar()
+          if (discharge.status === 'pending') {
+            discharge.title = `${discharge.boardName}`
+            discharge.disabled = true
           } else {
-            r.title = `${r.boardName}, ${r.date}`
+            discharge.title = `${discharge.boardName}, ${discharge.date}`
           }
-          r.progress = parseFloat(r.stats.completeRatio * 100).toFixed(1)
-          r.variant = this.getVariantFormStatus(r.status)
-          if (r.status === 'active') r.isActive = true
-          r.resistorStats = r.resistorStats || []
-          r.resistorStats = r.resistorStats.map((rstat) => {
+          discharge.progress = parseFloat(discharge.stats.completeRatio * 100).toFixed(1)
+          discharge.variant = this.getVariantFormStatus(discharge.status)
+          if (discharge.status === 'active') discharge.isActive = true
+          discharge.resistorStats = discharge.resistorStats || []
+          discharge.resistorStats = discharge.resistorStats.map((rstat) => {
             rstat.progress = parseFloat(rstat.stats.completeRatio * 100).toFixed(1)
+
+            rstat.onHandDone =  rstat.stats.complete >= discharge.stats.probableComplete && discharge.stats.probableComplete > 0
+            console.log(rstat.stats , discharge.stats.probableComplete)
             return rstat
           })
-          r.powerSource = r.powerSource || { status: 'n/a' }
-          r.powerSource.variant = this.getVariantFormStatus(r.powerSource.status)
-          return r
+          discharge.powerSource = discharge.powerSource || { status: 'n/a' }
+          discharge.powerSource.variant = this.getVariantFormStatus(discharge.powerSource.status)
+          return discharge
         })
       },
       parentId() {

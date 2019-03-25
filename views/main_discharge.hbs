@@ -29,6 +29,7 @@
         <th scope="col">Progress</th>
         <th scope="col">Integrity</th>
         <th scope="col">Duration</th>
+        <th scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -41,11 +42,15 @@
         <td><code>${ d.payload }</code></td>
         <td :class="{
           'text-success': d.isComplete,
-          'text-danger': d.isFailed
+          'text-danger': d.isFailed,
+          'text-black-50': d.isAborted
           }">${ d.status }</td>
         <td>${ d.progress }%</td>
         <td><span v-if="d.isDone">${ d.integrity }%</span></td>
         <td>${ d.durationTxt }</td>
+        <td>
+          <b-btn variant="secondary" v-if="d.abortable" @click="abortDischarge(d._id)">Abort</b-btn>
+        </td>
 
       </tr>
     </tbody>
@@ -102,6 +107,21 @@
           this.discharging = false
           this.fetchRawData()
         })
+      },
+      abortDischarge: function(id) {
+        this.discharging = true
+        const payload = jsoneditor.get()
+
+        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/abort/${id}`
+        , {
+          method: 'POST',
+          body: JSON.stringify({ payload }), // data can be `string` or
+          headers:{ 'Content-Type': 'application/json' }
+        })
+        .then(resp => resp.json())
+        .then((json) => {
+          this.fetchRawData()
+        })
       }
     },
     computed: {
@@ -112,6 +132,9 @@
           r.integrity = parseFloat(r.stats.integrityRatio * 100).toFixed(1)
           r.isComplete = r.status === 'complete'
           r.isFailed = r.status === 'failed'
+          r.isAborted = r.status === 'aborted'
+          r.abortable = r.status === 'active'
+          console.log(r)
           r.isDone = r.isComplete || r.isFailed
           r.url = `${CONFIG.basePath}/mainboard/${PARAM.mainboard}/circuit_discharge?parentId=${r._id}`
           r.retryCount = r.retry ? r.retry.length : ' '
