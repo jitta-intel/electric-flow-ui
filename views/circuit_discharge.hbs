@@ -47,8 +47,8 @@
             <b-badge variant="danger" v-if="d.stats.failed">Failed: ${d.stats.failed}</b-badge>
             <b-badge variant="dark" v-if="d.stats.markedAsComplete">Marked: -${d.stats.markedAsComplete}</b-badge>
             <b-badge variant="success" v-if="d.stats.isAllDone">Done</b-badge>
-            <b-badge variant="warning" v-else-if="d.stats.completeRatio > 0">Progress: ${d.progress}%
-            </b-badge>
+            <b-badge variant="warning" v-else-if="d.stats.completeRatio > 0">Progress: ${d.progress}%</b-badge>
+            <b-badge variant="dark" v-if="d.stats.aborted">Aborted: -${d.stats.aborted}</b-badge>
           </p>
           <h6>By Resistors</h6>
           <p class="card-text">
@@ -63,6 +63,7 @@
               <b-badge variant="success" v-if="rstat.onHandDone">Done</b-badge>
               <b-badge variant="warning" v-else-if="rstat.stats.completeRatio > 0">Progress: ${rstat.progress}%
               </b-badge>
+              <b-badge variant="dark" v-if="rstat.stats.aborted">Aborted: -${rstat.stats.aborted}</b-badge>
               <b-badge v-if="isResistorWorking(rstat.stats)" variant="warning">Working</b-badge>
               <b-btn :href="getArenaPath(rstat.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn>
             </p>
@@ -138,7 +139,7 @@
       },
 
       isResistorWorking: function(stat) {
-        return (stat.failed + stat.complete) < stat.consumed
+        return (stat.failed + stat.complete + stat.aborted) < stat.consumed
       },
       dateFormat: function(date) {
         return moment(date).format('YYYY-MM-DD hh:mm')
@@ -179,7 +180,6 @@
             rstat.progress = parseFloat(rstat.stats.completeRatio * 100).toFixed(1)
 
             rstat.onHandDone =  rstat.stats.complete >= discharge.stats.probableComplete && discharge.stats.probableComplete > 0
-            console.log(rstat.stats , discharge.stats.probableComplete)
             return rstat
           })
           discharge.powerSource = discharge.powerSource || { status: 'n/a' }
