@@ -4,6 +4,28 @@ const bodyParser = require('body-parser')
 const handlebars = require('handlebars')
 const exphbs = require('express-handlebars')
 
+
+/*
+  this config will be passes through view rendering
+  config = { api, basePath arenaPath }
+*/
+const applyMiddleware = ({ app, electricFlow }) => {
+  const config = createConfig(electricFlow)
+  console.log('Electric-flow-Ui: init ui with config ', config)
+  app.use(config.basePath, createApp(config))
+}
+
+
+function createConfig(electricFlow) {
+  const config = {
+    // baseUiPath
+    basePath: `${electricFlow.basePath}/ui`,
+    api: electricFlow.apiPath,
+    arenaPath: electricFlow.arenaPath
+  }
+  return config
+}
+
 function createApp(config, listenOpts = {}) {
   const app = express()
   handlebars.registerHelper('json', function(context) {
@@ -25,7 +47,9 @@ function createApp(config, listenOpts = {}) {
     res.locals.param = {}
     next()
   })
-  app.get('/', (req, res) => res.redirect('/mainboard'))
+  app.get('/', (req, res) => {
+    res.redirect(`${req.originalUrl}/mainboard`)
+  })
 
   app.get('/mainboard', function (req, res) {
     res.render('mainboard')
@@ -49,4 +73,6 @@ function createApp(config, listenOpts = {}) {
   return app
 }
 
-module.exports = createApp
+module.exports = {
+  applyMiddleware
+}

@@ -68,7 +68,7 @@
     data: {
       mainboard: PARAM.mainboard,
       query: {
-        startDate: new Date(),
+        startDate: moment().subtract(7, 'days').toDate(),
         endDate: new Date()
       },
       discharging: false,
