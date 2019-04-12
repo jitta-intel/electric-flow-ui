@@ -9,19 +9,20 @@ const exphbs = require('express-handlebars')
   this config will be passes through view rendering
   config = { api, basePath arenaPath }
 */
-const applyMiddleware = ({ app, electricFlow }) => {
-  const config = createConfig(electricFlow)
+const applyMiddleware = ({ app, electricFlow, options }) => {
+  const config = createConfig(electricFlow, options)
   console.log('Electric-flow-Ui: init ui with config ', config)
   app.use(config.basePath, createApp(config))
 }
 
 
-function createConfig(electricFlow) {
+function createConfig(electricFlow, options = {}) {
   const config = {
     // baseUiPath
     basePath: `${electricFlow.basePath}/ui`,
     api: electricFlow.apiPath,
-    arenaPath: electricFlow.arenaPath
+    arenaPath: electricFlow.arenaPath,
+    appName: options.appName || 'App'
   }
   return config
 }
