@@ -109,7 +109,6 @@
         })
       },
       abortDischarge: function(id) {
-        this.discharging = true
         const payload = jsoneditor.get()
 
         fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/abort/${id}`
