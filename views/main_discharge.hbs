@@ -111,7 +111,7 @@
       abortDischarge: function(id) {
         const payload = jsoneditor.get()
 
-        fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/abort/${id}`
+        return fetch(`${CONFIG.api}/mainboard/${PARAM.mainboard}/abort/${id}`
         , {
           method: 'POST',
           body: JSON.stringify({ payload }), // data can be `string` or
@@ -119,7 +119,7 @@
         })
         .then(resp => resp.json())
         .then((json) => {
-          this.fetchRawData()
+          return this.fetchRawData()
         })
       }
     },
@@ -133,7 +133,6 @@
           r.isFailed = r.status === 'failed'
           r.isAborted = r.status === 'aborted'
           r.abortable = r.status === 'active'
-          console.log(r)
           r.isDone = r.isComplete || r.isFailed
           r.url = `${CONFIG.basePath}/mainboard/${PARAM.mainboard}/circuit_discharge?parentId=${r._id}`
           r.retryCount = r.retry ? r.retry.length : ' '
