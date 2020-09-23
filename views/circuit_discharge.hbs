@@ -36,7 +36,7 @@
             <b-badge class="text-capitalize" :variant="d.powerSource.variant">
               ${d.powerSource.status}
             </b-badge>
-            <b-btn :href="getArenaPath(d.powerSource.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn>
+            {{!-- <b-btn :href="getArenaPath(d.powerSource.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn> --}}
           </p>
           <h6>Electrons</h6>
           <p class="card-text">
@@ -65,7 +65,7 @@
               </b-badge>
               <b-badge variant="dark" v-if="rstat.stats.aborted">Aborted: -${rstat.stats.aborted}</b-badge>
               <b-badge v-if="isResistorWorking(rstat.stats)" variant="warning">Working</b-badge>
-              <b-btn :href="getArenaPath(rstat.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn>
+              {{!-- <b-btn :href="getArenaPath(rstat.queuePath)" title="Arena page" target="_blank" variant="link">?</b-btn> --}}
             </p>
             <div v-if="d.retry.length > 0">
               <h6>Retry</h6>
@@ -144,9 +144,9 @@
       dateFormat: function(date) {
         return moment(date).format('YYYY-MM-DD hh:mm')
       },
-      getArenaPath: function(queuePath) {
+      /* getArenaPath: function(queuePath) {
         return `${CONFIG.arenaPath}${queuePath}`
-      },
+      }, */
       getVariantFormStatus: function(status) {
         let variant = 'default'
         if (status === 'complete') variant = 'success'

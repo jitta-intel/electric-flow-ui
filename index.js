@@ -3,16 +3,19 @@ const path = require('path')
 const bodyParser = require('body-parser')
 const handlebars = require('handlebars')
 const exphbs = require('express-handlebars')
+const BullBoard = require('bull-board')
 
 
 /*
   this config will be passes through view rendering
-  config = { api, basePath arenaPath }
+  config = { api, basePath }
 */
 const applyMiddleware = ({ app, electricFlow, options }) => {
   const config = createConfig(electricFlow, options)
   console.log('Electric-flow-Ui: init ui with config ', config)
+  BullBoard.setQueues(electricFlow.getQueues())
   app.use(config.basePath, createApp(config))
+  app.use(config.bullBoardPath, BullBoard.UI)
 }
 
 
@@ -21,7 +24,7 @@ function createConfig(electricFlow, options = {}) {
     // baseUiPath
     basePath: `${electricFlow.basePath}/ui`,
     api: electricFlow.apiPath,
-    arenaPath: electricFlow.arenaPath,
+    bullBoardPath: `${electricFlow.basePath}/ui/bull-board`,
     appName: options.appName || 'App'
   }
   return config
