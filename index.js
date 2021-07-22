@@ -3,7 +3,10 @@ const path = require('path')
 const bodyParser = require('body-parser')
 const handlebars = require('handlebars')
 const exphbs = require('express-handlebars')
-const BullBoard = require('bull-board')
+
+const { createBullBoard } = require('@bull-board/api')
+const { BullAdapter } = require('@bull-board/api/bullAdapter')
+const { ExpressAdapter } = require('@bull-board/express')
 
 
 /*
@@ -13,9 +16,16 @@ const BullBoard = require('bull-board')
 const applyMiddleware = ({ app, electricFlow, options }) => {
   const config = createConfig(electricFlow, options)
   console.log('Electric-flow-Ui: init ui with config ', config)
-  BullBoard.setQueues(electricFlow.getQueues())
+
+  const serverAdapter = new ExpressAdapter()
+  serverAdapter.setBasePath(config.bullBoardPath)
+  const bullAdapters = electricFlow.getQueues().map(q => new BullAdapter(q))
+  createBullBoard({
+    queues: bullAdapters,
+    serverAdapter: serverAdapter
+  })
   app.use(config.basePath, createApp(config))
-  app.use(config.bullBoardPath, BullBoard.UI)
+  app.use(config.bullBoardPath, serverAdapter.getRouter())
 }
 
 
